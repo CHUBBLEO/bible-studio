@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>聖經解構室｜影片製作系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+        .step-card {
+            border-left: 4px solid #3b82f6;
+            transition: all 0.3s ease;
+        }
+        .step-card.collapsed {
+            max-height: 60px;
+            overflow: hidden;
+        }
+        .btn-primary { @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors; }
+        .btn-secondary { @apply bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg transition-colors; }
+        input, textarea { @apply bg-slate-800 border border-slate-700 text-white p-3 rounded-lg w-full focus:ring-2 focus:ring-blue-500 outline-none; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="pb-10">
+
+    <!-- Header & Config -->
+    <header class="p-4 bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+        <div class="flex justify-between items-center max-w-4xl mx-auto">
+            <h1 class="text-xl font-bold text-blue-400">聖經解構室 <span class="text-xs font-normal text-slate-400">v2.0 Flash</span></h1>
+            <button onclick="toggleSettings()" class="text-slate-400">⚙️ 設定</button>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 space-y-6">
+        
+        <!-- Settings Overlay -->
+        <div id="settings-panel" class="hidden bg-slate-800 p-6 rounded-xl border border-slate-700 mb-6">
+            <h2 class="text-lg font-bold mb-4">系統設定</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm mb-1">Gemini API Key</label>
+                    <input type="password" id="api-key" placeholder="輸入 API Key">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Google Client ID (OAuth)</label>
+                    <input type="text" id="client-id" placeholder="用於存取試算表">
+                </div>
+                <button onclick="saveSettings()" class="btn-primary w-full">儲存設定</button>
+            </div>
+        </div>
+
+        <!-- Chat / Guide Area -->
+        <div id="guide-area" class="bg-blue-900/30 p-6 rounded-2xl border border-blue-500/50 shadow-lg">
+            <div id="guide-text" class="text-xl font-medium leading-relaxed italic">
+                平安！我是你的聖經解構助手。請輸入你想製作的聖經章節（例如：創世記12章）。
+            </div>
+            <div id="main-input-group" class="mt-6 flex gap-2">
+                <input type="text" id="chapter-input" placeholder="例如：創世記12章" class="text-lg">
+                <button onclick="startProcess()" id="start-btn" class="btn-primary whitespace-nowrap">開始製作</button>
+            </div>
+        </div>
+
+        <!-- Progress Steps Area -->
+        <div id="results-container" class="space-y-4">
+            <!-- Steps will be injected here -->
+        </div>
+
+    </main>
+
+    <!-- Templates -->
+    <template id="step-template">
+        <div class="step-card bg-slate-800 rounded-xl overflow-hidden shadow-md">
+            <div class="p-4 bg-slate-700/50 flex justify-between items-center cursor-pointer" onclick="toggleCollapse(this.parentElement)">
+                <h3 class="font-bold flex items-center gap-2">
+                    <span class="step-number bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs"></span>
+                    <span class="step-title"></span>
+                </h3>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div class="p-4 content-area space-y-4">
+                <div class="output-content text-lg leading-relaxed whitespace-pre-wrap"></div>
+                <div class="flex gap-2 pt-4 border-t border-slate-700">
+                    <button class="btn-adjust btn-secondary flex-1">調整</button>
+                    <button class="btn-confirm btn-primary flex-1">確認</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        /* -------------------------------------------------------------------------- */
+        /*                                  配置與常數                                  */
+        /* -------------------------------------------------------------------------- */
+        let CONFIG = {
+            apiKey: localStorage.getItem('bible_gemini_key') || '',
+            clientId: localStorage.getItem('bible_client_id') || '',
+            spreadsheetId: '1WCWAFKXk3jLDAHLPeuXegfySdBL6y3UiQd5kIpUKeq4'
+        };
+
+        const SYSTEM_PROMPT = `
+你是一位專業的「聖經解構室」編劇。你的目標是用「反直覺、現代感、高節奏」的方式重新詮釋聖經。
+請嚴格遵守以下術語轉化表進行創作：
+- 上帝的命令 → 強制性條款
+- 魔鬼的誘惑 → 高風險外快
+- 祭壇/獻祭 → 簽約現場/績效考核
+- 生養眾多 → KPI壓力
+- 神的揀選 → 內定名單
+- 立約 → 簽保密協議
+- 咒詛 → 法律追訴
+- 祝福 → 股票分紅
+- 違反禁令 → 違約
+- 審判 → 集體約談
+- 驅逐出園 → 強制解約離場
+- 族譜記錄 → 人事檔案
+- 壽命 → 合約期限
+- 上帝 → 大後台
+- 亞伯蘭與上帝的約 → 保護傘合約
+- 亞伯蘭讓撒萊謊稱妹子 → 騙婚
+- 上帝懲罰法老 → 違約金從受害者身上扣
+- 上帝承諾後裔但撒萊不生育 → 空頭支票
+- 撒萊不生育 → 生產線停工
+- 法老給亞伯蘭的財物 → 天價彩禮
+
+並落實七條創作規則：
+1. 快速反轉：段落必須有轉折。
+2. 反直覺：結論要與傳統認知不同。
+3. 反常識：用現代視角解讀古代行為。
+4. 不知不覺灌輸知識：知識點對應笑點。
+5. 節奏感：每30秒一個鉤子。
+6. 情緒弧線：衝擊→好奇→懸念→釋放→餘韻。
+7. 觀眾代入感：結尾必須有互動問題。
+`;
+
+        let appData = {
+            chapter: '',
+            analysis: null,
+            episodes: [],
+            currentEpisode: 0,
+            scripts: [],
+            token: null
+        };
+
+        /* -------------------------------------------------------------------------- */
+        /*                                  初始化與 UI                                */
+        /* -------------------------------------------------------------------------- */
+        window.onload = () => {
+            if (!CONFIG.apiKey) toggleSettings();
+            document.getElementById('api-key').value = CONFIG.apiKey;
+            document.getElementById('client-id').value = CONFIG.clientId;
+        };
+
+        function toggleSettings() {
+            const el = document.getElementById('settings-panel');
+            el.classList.toggle('hidden');
+        }
+
+        function saveSettings() {
+            const key = document.getElementById('api-key').value;
+            const cid = document.getElementById('client-id').value;
+            localStorage.setItem('bible_gemini_key', key);
+            localStorage.setItem('bible_client_id', cid);
+            CONFIG.apiKey = key;
+            CONFIG.clientId = cid;
+            alert('設定已儲存');
+            toggleSettings();
+        }
+
+        function toggleCollapse(el) {
+            el.classList.toggle('collapsed');
+        }
+
+        function updateGuide(text) {
+            document.getElementById('guide-text').innerText = text;
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                                  API 調用核心                               */
+        /* -------------------------------------------------------------------------- */
+        async function callGemini(prompt, retryCount = 0) {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.apiKey}`;
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: SYSTEM_PROMPT + "\n\n任務：" + prompt }] }],
+                        generationConfig: { temperature: 0.7, maxOutputTokens: 2000 }
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error.message);
+                return data.candidates[0].content.parts[0].text;
+            } catch (error) {
+                if (retryCount < 2) {
+                    console.log(`重試中... (${retryCount + 1})`);
+                    return await callGemini(prompt, retryCount + 1);
+                }
+                throw error;
+            }
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                                  流程控制                                   */
+        /* -------------------------------------------------------------------------- */
+        
+        async function startProcess() {
+            const input = document.getElementById('chapter-input').value;
+            if (!input) return alert('請輸入章節');
+            appData.chapter = input;
+            
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('start-btn').innerHTML = '<span class="loader"></span>';
+            
+            try {
+                await runStep1();
+            } catch (e) {
+                alert('發生錯誤: ' + e.message);
+                document.getElementById('start-btn').disabled = false;
+                document.getElementById('start-btn').innerText = '重試';
+            }
+        }
+
+        // --- STEP 1: 內容分析 ---
+        async function runStep1() {
+            updateGuide("正在深度解構內容...");
+            const prompt = `針對聖經「${appData.chapter}」，請提供：
+            1. 原文全文內容
+            2. 現代白話翻譯 (請套用術語轉化表)
+            3. 爆點分析表 (條列出5個最具衝擊力的點)`;
+
+            const result = await callGemini(prompt);
+            appData.analysis = result;
+            
+            const stepEl = createStepUI(1, "內容分析", result, async () => {
+                await runStep2();
+            });
+            document.getElementById('results-container').prepend(stepEl);
+        }
+
+        // --- STEP 2: 集數規劃 ---
+        async function runStep2() {
+            updateGuide("正在評估爆點密度並規劃集數...");
+            const prompt = `根據以下分析，計算字數並建議拆分集數。
+            規則：內容朗讀約 90-150秒→單集、150-180秒→上下集、180秒以上→上中下集。
+            
+            分析內容：${appData.analysis}
+            
+            請輸出：
+            - 預估總時長
+            - 建議集數
+            - 每集的主題簡述`;
+
+            const result = await callGemini(prompt);
+            createStepUI(2, "集數規劃", result, async () => {
+                await runStep3();
+            });
+        }
+
+        // --- STEP 3: 腳本生成 ---
+        async function runStep3() {
+            updateGuide("正在根據七大規則生成爆款腳本...");
+            const prompt = `請為「${appData.chapter}」編寫完整短影音腳本。
+            要求：
+            - 必須嚴格執行七大創作規則。
+            - 使用術語轉化表。
+            - 標註[畫面描述]、[旁白口播]、[預估秒數]。
+            - 總時長需符合集數規劃。`;
+
+            const result = await callGemini(prompt);
+            appData.scripts.push(result);
+            createStepUI(3, "完整腳本", result, async () => {
+                await runStep4();
+            });
+        }
+
+        // --- STEP 4: 圖片提示詞 ---
+        async function runStep4() {
+            updateGuide("正在生成 AI 繪圖提示詞...");
+            const prompt = `根據腳本內容，生成 5-6 張適合 Midjourney 或 Gemini 生成的圖片提示詞 (Prompt)。
+            另外提供一張「縮圖提示詞」。
+            格式：[段落說明] -> [英文提示詞]`;
+
+            const result = await callGemini(prompt);
+            createStepUI(4, "圖片提示詞", result, async () => {
+                await runStep5();
+            });
+        }
+
+        // --- STEP 5: 音訊生成 (TTS) ---
+        async function runStep5() {
+            updateGuide("音訊準備中...");
+            const ttsCode = `
+# 請將此程式碼複製到 Google Colab 執行
+!pip install gTTS
+from gtts import gTTS
+import os
+
+text = """${appData.scripts[0]}""" # 系統已自動填入
+tts = gTTS(text=text, lang='zh-tw')
+tts.save("audio.mp3")
+print("音訊生成成功：audio.mp3")
+            `;
+            
+            createStepUI(5, "音訊生成 (TTS)", "請點擊「調整」來獲取程式碼，執行後請輸入最終音訊長度：\n\n" + ttsCode, async () => {
+                const duration = prompt("請輸入生成的音訊總秒數：");
+                if (duration > 60) {
+                    alert("警告：超過 60 秒可能會影響 Short 流量，建議微調。");
+                }
+                await runStep6();
+            });
+        }
+
+        // --- STEP 6: 發布素材 ---
+        async function runStep6() {
+            updateGuide("最後一步：準備發布素材！");
+            const prompt = `針對這集內容，生成：
+            1. 4個吸引人的 YT 標題（包含懸念型、打臉型）
+            2. Hashtags
+            3. 配樂風格推薦
+            4. 第一則引導留言（問題）`;
+
+            const result = await callGemini(prompt);
+            createStepUI(6, "發布素材", result, () => {
+                updateGuide("恭喜！本集製作完成。資料已準備同步至試算表。");
+                saveToSheets();
+            });
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                                  輔助工具                                   */
+        /* -------------------------------------------------------------------------- */
+
+        function createStepUI(num, title, content, onConfirm) {
+            const temp = document.getElementById('step-template');
+            const clone = temp.content.cloneNode(true);
+            const root = clone.querySelector('.step-card');
+            
+            root.querySelector('.step-number').innerText = num;
+            root.querySelector('.step-title').innerText = title;
+            root.querySelector('.output-content').innerText = content;
+            
+            root.querySelector('.btn-confirm').onclick = () => {
+                root.classList.add('collapsed');
+                onConfirm();
+            };
+            
+            root.querySelector('.btn-adjust').onclick = () => {
+                const newContent = prompt("請輸入調整建議：");
+                if (newContent) {
+                    alert("收到！正在根據建議重新生成...");
+                    // 這裡可以再次呼叫 Gemini
+                }
+            };
+
+            document.getElementById('results-container').prepend(root);
+            root.scrollIntoView({ behavior: 'smooth' });
+            return root;
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                             Google Sheets 整合                              */
+        /* -------------------------------------------------------------------------- */
+
+        async function saveToSheets() {
+            // 注意：此處僅為結構示範，實際運行需正確配置 OAuth Client ID 與 Token
+            if (!CONFIG.clientId) {
