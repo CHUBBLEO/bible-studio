@@ -336,7 +336,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: SYSTEM_PROMPT + '\n\n任務：' + prompt }] }],
-          generationConfig: { temperature: 0.75, maxOutputTokens: 8192 }
+          generationConfig: { temperature: 0.75, maxOutputTokens: 65535 }
         })
       });
       const data = await res.json();
