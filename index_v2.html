@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>聖經解構室｜影片製作系統</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Noto Sans TC', sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+  header {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header h1 { font-size: 18px; color: #58a6ff; font-weight: 700; }
+  header span { font-size: 12px; color: #8b949e; font-weight: 400; margin-left: 6px; }
+  .btn-settings {
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  main { max-width: 680px; margin: 0 auto; padding: 16px; }
+
+  /* Settings Panel */
+  #settings-panel {
+    display: none;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  #settings-panel h2 { font-size: 16px; margin-bottom: 16px; color: #58a6ff; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 13px; color: #8b949e; margin-bottom: 6px; }
+  .form-group input {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: #e6edf3;
+    font-size: 15px;
+  }
+  .form-group input:focus { outline: none; border-color: #58a6ff; }
+  .btn-save {
+    width: 100%;
+    background: #238636;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .btn-save:hover { background: #2ea043; }
+
+  /* Guide Area */
+  #guide-area {
+    background: linear-gradient(135deg, #1a2744 0%, #162032 100%);
+    border: 1px solid #1f4068;
+    border-radius: 16px;
+    padding: 24px 20px;
+    margin-bottom: 20px;
+  }
+  #guide-text {
+    font-size: 18px;
+    line-height: 1.6;
+    color: #cdd9e5;
+    margin-bottom: 20px;
+  }
+  #main-input-group { display: flex; gap: 10px; }
+  #chapter-input {
+    flex: 1;
+    background: #0d1117;
+    border: 1px solid #388bfd;
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: #e6edf3;
+    font-size: 16px;
+  }
+  #chapter-input::placeholder { color: #8b949e; }
+  #chapter-input:focus { outline: none; border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88,166,255,0.2); }
+  #start-btn {
+    background: #1f6feb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  #start-btn:hover { background: #388bfd; }
+  #start-btn:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+
+  /* Step Cards */
+  #results-container { display: flex; flex-direction: column; gap: 14px; }
+  .step-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    overflow: hidden;
+    border-left: 4px solid #1f6feb;
+  }
+  .step-header {
+    padding: 14px 16px;
+    background: #21262d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .step-header-left { display: flex; align-items: center; gap: 10px; }
+  .step-number {
+    background: #1f6feb;
+    color: white;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-title { font-size: 15px; font-weight: 600; }
+  .collapse-icon { color: #8b949e; font-size: 12px; transition: transform 0.2s; }
+  .step-card.collapsed .collapse-icon { transform: rotate(-90deg); }
+  .step-content { padding: 16px; }
+  .step-card.collapsed .step-content { display: none; }
+  .output-content {
+    font-size: 15px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    color: #cdd9e5;
+    margin-bottom: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .step-actions { display: flex; gap: 10px; border-top: 1px solid #30363d; padding-top: 14px; }
+  .btn-adjust {
+    flex: 1;
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-adjust:hover { background: #30363d; }
+  .btn-confirm {
+    flex: 1;
+    background: #238636;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-confirm:hover { background: #2ea043; }
+
+  /* Loader */
+  .loader {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Alert */
+  .alert {
+    background: #1c2128;
+    border: 1px solid #f85149;
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #f85149;
+    font-size: 14px;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>聖經解構室<span>製作系統</span></h1>
+  </div>
+  <button class="btn-settings" onclick="toggleSettings()">⚙️ 設定</button>
+</header>
+
+<main>
+
+  <!-- Settings Panel -->
+  <div id="settings-panel">
+    <h2>系統設定</h2>
+    <div class="form-group">
+      <label>Gemini API Key</label>
+      <input type="password" id="api-key" placeholder="輸入你的 Gemini API Key">
+    </div>
+    <button class="btn-save" onclick="saveSettings()">儲存設定</button>
+    <div id="settings-msg" style="margin-top:10px; font-size:13px; color:#3fb950; display:none;">✅ 設定已儲存</div>
+  </div>
+
+  <!-- Guide Area -->
+  <div id="guide-area">
+    <div id="guide-text">平安！我是你的聖經解構助手。請輸入你想製作的聖經章節（例如：創世記15章）。</div>
+    <div id="main-input-group">
+      <input type="text" id="chapter-input" placeholder="例如：創世記15章">
+      <button id="start-btn" onclick="startProcess()">開始製作</button>
+    </div>
+    <div id="error-msg" class="alert" style="display:none;"></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-container"></div>
+
+</main>
+
+<script>
+  // ── 設定 ──
+  let CONFIG = {
+    apiKey: localStorage.getItem('bible_api_key') || ''
+  };
+
+  const SYSTEM_PROMPT = `你是「聖經解構室」的專業編劇。用反直覺、現代感、高節奏方式重新詮釋聖經。
+
+術語轉化表（必須使用）：
+上帝 → 大後台
+上帝的命令 → 強制性條款
+立約 → 簽保密協議
+咒詛 → 法律追訴
+祝福 → 股票分紅
+違反禁令 → 違約
+審判 → 集體約談
+驅逐出園 → 強制解約離場
+祭壇/獻祭 → 簽約現場/績效考核
+生養眾多 → KPI壓力
+神的揀選 → 內定名單
+族譜記錄 → 人事檔案
+壽命 → 合約期限
+亞伯蘭與上帝的約 → 保護傘合約
+上帝承諾後裔但撒萊不生育 → 空頭支票
+撒萊不生育 → 生產線停工
+
+七條創作規則：
+1. 快速反轉：段落必須有轉折，打破觀眾預期
+2. 反直覺：結論要讓人覺得「跟我想的不一樣」
+3. 反常識：用現代視角解讀古代行為
+4. 不知不覺灌輸知識：知識點必須對應笑點
+5. 節奏感：每30秒一個讓人繼續看的理由
+6. 情緒弧線：衝擊→好奇→懸念→釋放→餘韻
+7. 觀眾代入感：結尾必須有互動留言問題
+
+語調：冷面笑匠。旁白正經專業，充滿現代觀點的吐槽。`;
+
+  let appData = { chapter: '', analysis: '' };
+
+  // ── 初始化 ──
+  window.onload = () => {
+    if (CONFIG.apiKey) {
+      document.getElementById('api-key').value = CONFIG.apiKey;
+    } else {
+      toggleSettings();
+    }
+  };
+
+  // ── UI ──
+  function toggleSettings() {
+    const panel = document.getElementById('settings-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function saveSettings() {
+    const key = document.getElementById('api-key').value.trim();
+    if (!key) { alert('請輸入 API Key'); return; }
+    localStorage.setItem('bible_api_key', key);
+    CONFIG.apiKey = key;
+    document.getElementById('settings-msg').style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('settings-msg').style.display = 'none';
+      toggleSettings();
+    }, 1500);
+  }
+
+  function updateGuide(text) {
+    document.getElementById('guide-text').innerText = text;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.innerText = '❌ ' + msg;
+    el.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-msg').style.display = 'none';
+  }
+
+  // ── Gemini API ──
+  async function callGemini(prompt, retries = 0) {
+    if (!CONFIG.apiKey) throw new Error('請先在設定中輸入 API Key');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.apiKey}`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: SYSTEM_PROMPT + '\n\n任務：' + prompt }] }],
+          generationConfig: { temperature: 0.75, maxOutputTokens: 2048 }
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || '未知錯誤');
+      return data.candidates[0].content.parts[0].text;
+    } catch (e) {
+      if (retries < 2) return callGemini(prompt, retries + 1);
+      throw e;
+    }
+  }
+
+  // ── Step UI ──
+  function createStep(num, title, content, onConfirm, onAdjust) {
+    const card = document.createElement('div');
+    card.className = 'step-card';
+    card.innerHTML = `
+      <div class="step-header" onclick="toggleStep(this.parentElement)">
+        <div class="step-header-left">
+          <div class="step-number">${num}</div>
+          <div class="step-title">${title}</div>
+        </div>
+        <span class="collapse-icon">▼</span>
+      </div>
+      <div class="step-content">
+        <div class="output-content"></div>
+        <div class="step-actions">
+          <button class="btn-adjust">調整</button>
+          <button class="btn-confirm">確認，繼續</button>
+        </div>
+      </div>
+    `;
+    card.querySelector('.output-content').innerText = content;
+    card.querySelector('.btn-confirm').onclick = () => {
+      card.classList.add('collapsed');
+      onConfirm();
+    };
+    card.querySelector('.btn-adjust').onclick = onAdjust || (() => {
+      const input = window.prompt('請輸入調整建議：');
+      if (input) alert('收到！請重新開始這個步驟。');
+    });
+    document.getElementById('results-container').appendChild(card);
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return card;
+  }
+
+  function toggleStep(card) {
+    card.classList.toggle('collapsed');
+  }
+
+  // ── 流程 ──
+  async function startProcess() {
+    hideError();
+    const chapter = document.getElementById('chapter-input').value.trim();
+    if (!chapter) { showError('請輸入章節'); return; }
+    if (!CONFIG.apiKey) { showError('請先在設定中輸入 API Key'); toggleSettings(); return; }
+
+    appData.chapter = chapter;
+    document.getElementById('results-container').innerHTML = '';
+    document.getElementById('start-btn').disabled = true;
+    document.getElementById('start-btn').innerHTML = '<span class="loader"></span>';
+
+    try {
+      await step1();
+    } catch (e) {
+      showError(e.message);
+      document.getElementById('start-btn').disabled = false;
+      document.getElementById('start-btn').innerText = '重試';
+    }
+  }
+
+  async function step1() {
+    updateGuide('正在解構內容，請稍候...');
+    const result = await callGemini(`
+針對聖經「${appData.chapter}」，請提供：
+
+【原文全文】
+逐節完整輸出，含節碼。
+
+【白話翻譯】
+套用術語轉化表，現代語言重新詮釋。
+
+【爆點分析】
+列出5個最具衝擊力的爆點，格式：
+爆點1：[內容] 強度：★★★★★ 適合位置：[開場/中段/結尾]
+`);
+    appData.analysis = result;
+    createStep(1, '內容分析', result, () => step2());
+    document.getElementById('start-btn').disabled = false;
+    document.getElementById('start-btn').innerText = '重新開始';
+  }
+
+  async function step2() {
+    updateGuide('正在規劃集數...');
+    const result = await callGemini(`
+根據以下分析，建議拆集方式：
+- 90-150秒 → 單集
+- 150-180秒 → 上下集
+- 180秒以上 → 上中下集
+
+分析：${appData.analysis}
+
+請輸出：
+- 建議集數與原因
+- 每集主題簡述
+- 每集預估時長
+`);
+    createStep(2, '集數規劃', result, () => step3());
+  }
+
+  async function step3() {
+    updateGuide('正在生成腳本...');
+    const result = await callGemini(`
+請為「${appData.chapter}」編寫完整短影音腳本。
+
+格式：
+【段落名稱｜說明｜時間區間】
+**旁白（語氣）：**
+「台詞」
+**停頓**
+
+要求：
+- 嚴格執行七條創作規則
+- 使用術語轉化表
+- 開場第一句必須是爆點
+- 結尾必須有留言互動問題
+- 附預估總時長
+`);
+    createStep(3, '完整腳本', result, () => step4());
+  }
+
+  async function step4() {
+    updateGuide('正在生成圖片提示詞...');
+    const result = await callGemini(`
+根據「${appData.chapter}」的腳本，生成圖片提示詞。
+
+格式：
+圖1｜[段落說明]
+[英文提示詞]
+
+規格：
+- 畫風：Biblical oil painting style 或 Biblical illuminated manuscript style
+- 規格：Cinematic 9:16, hyper-realistic, dramatic lighting, subtle oil painting texture
+- 數量：5-6張 + 縮圖1張
+- 禁止：文字、數字出現在畫面中
+`);
+    createStep(4, '圖片提示詞', result, () => step5());
+  }
+
+  async function step5() {
+    updateGuide('正在生成發布素材...');
+    const result = await callGemini(`
+針對「${appData.chapter}」這集內容，生成：
+
+【YT標題】（4個方案，格式：標題｜創世紀解構EP##）
+【Hashtag】（約15個，無空格）
+固定包含：#創世記#聖經解構#冷知識#舊約聖經#短影音聖經#信仰#神學#台灣基督徒#Shorts#YTShorts
+【配樂推薦】（4個，Pixabay免費音樂，附用法說明）
+【第一則留言】（腳本中的互動問題）
+`);
+    createStep(5, '發布素材', result, () => {
+      updateGuide('🎉 本集製作完成！可以開始下一章了。');
+    });
+  }
+</script>
+</body>
+</html>
