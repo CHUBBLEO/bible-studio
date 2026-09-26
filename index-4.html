@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>聖經解構室｜製作系統</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'Noto Sans TC', sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+header {
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  padding: 14px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+header h1 { font-size: 17px; color: #58a6ff; font-weight: 700; }
+header h1 span { font-size: 12px; color: #8b949e; font-weight: 400; margin-left: 6px; }
+.btn-settings {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  padding: 7px 13px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+main { max-width: 680px; margin: 0 auto; padding: 14px; }
+#settings-panel {
+  display: none;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+#settings-panel h2 { font-size: 15px; margin-bottom: 14px; color: #58a6ff; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; color: #8b949e; margin-bottom: 5px; }
+.form-group input {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #e6edf3;
+  font-size: 15px;
+}
+.form-group input:focus { outline: none; border-color: #58a6ff; }
+.btn-save {
+  width: 100%;
+  background: #238636;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.settings-msg { margin-top: 8px; font-size: 12px; color: #3fb950; display: none; }
+#terms-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #30363d;
+}
+#terms-section h3 { font-size: 13px; color: #a371f7; margin-bottom: 10px; }
+#terms-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.term-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.term-row .term-text { color: #cdd9e5; }
+.term-row .term-text b { color: #e3b341; }
+.term-row .term-del {
+  background: transparent;
+  border: none;
+  color: #f85149;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+.term-empty { font-size: 12px; color: #8b949e; padding: 6px 0; }
+#guide-area {
+  background: linear-gradient(135deg, #1a2744 0%, #162032 100%);
+  border: 1px solid #1f4068;
+  border-radius: 16px;
+  padding: 20px 18px;
+  margin-bottom: 18px;
+}
+#guide-text { font-size: 17px; line-height: 1.6; color: #cdd9e5; margin-bottom: 18px; }
+.input-row { display: flex; gap: 8px; }
+#chapter-input {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #388bfd;
+  border-radius: 8px;
+  padding: 11px 13px;
+  color: #e6edf3;
+  font-size: 16px;
+}
+#chapter-input::placeholder { color: #8b949e; }
+#chapter-input:focus { outline: none; border-color: #58a6ff; }
+#start-btn {
+  background: #1f6feb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#start-btn:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+#error-msg {
+  background: #1c2128;
+  border: 1px solid #f85149;
+  border-radius: 8px;
+  padding: 11px 14px;
+  color: #f85149;
+  font-size: 13px;
+  margin-top: 10px;
+  display: none;
+}
+#restore-banner {
+  background: #1c2128;
+  border: 1px solid #388bfd;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+#restore-banner p { font-size: 13px; color: #cdd9e5; }
+.btn-restore {
+  background: #1f6feb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-clear {
+  background: transparent;
+  color: #8b949e;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#results-container { display: flex; flex-direction: column; gap: 12px; }
+.step-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-left: 4px solid #1f6feb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.step-header {
+  padding: 13px 15px;
+  background: #21262d;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+.step-header-left { display: flex; align-items: center; gap: 9px; }
+.step-num {
+  background: #1f6feb;
+  color: white;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  flex-shrink: 0;
+}
+.step-num.done { background: #238636; }
+.step-title { font-size: 14px; font-weight: 600; }
+.chevron { color: #8b949e; font-size: 11px; transition: transform 0.2s; }
+.step-card.collapsed .chevron { transform: rotate(-90deg); }
+.step-body { padding: 14px; }
+.step-card.collapsed .step-body { display: none; }
+.output-text {
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  color: #cdd9e5;
+  margin-bottom: 14px;
+  max-height: 450px;
+  overflow-y: auto;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  padding: 12px;
+}
+.step-actions { display: flex; gap: 8px; border-top: 1px solid #30363d; padding-top: 12px; }
+.btn-adj {
+  flex: 1;
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-ok {
+  flex: 1;
+  background: #238636;
+  border: none;
+  color: white;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.adjust-panel {
+  display: none;
+  margin-top: 12px;
+  border-top: 1px solid #30363d;
+  padding-top: 12px;
+}
+.adjust-panel textarea {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 10px;
+  color: #e6edf3;
+  font-size: 14px;
+  min-height: 80px;
+  resize: vertical;
+}
+.btn-regen {
+  margin-top: 8px;
+  width: 100%;
+  background: #b08800;
+  border: none;
+  color: white;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.loader {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#chat-panel {
+  display: none;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-left: 4px solid #a371f7;
+  border-radius: 12px;
+  margin-top: 16px;
+  overflow: hidden;
+}
+#chat-panel h3 {
+  padding: 13px 15px;
+  background: #21262d;
+  font-size: 14px;
+  color: #a371f7;
+}
+#chat-messages {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-msg { font-size: 13px; line-height: 1.6; padding: 10px 12px; border-radius: 8px; white-space: pre-wrap; max-width: 90%; }
+.chat-msg.user { background: #1f6feb; color: white; align-self: flex-end; }
+.chat-msg.ai { background: #0d1117; border: 1px solid #30363d; color: #cdd9e5; align-self: flex-start; }
+.chat-msg.updated-note { background: #2d2410; border: 1px solid #b08800; color: #e3b341; align-self: flex-start; font-size: 12px; }
+.chat-input-row { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid #30363d; }
+.chat-input-row textarea {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: #e6edf3;
+  font-size: 14px;
+  resize: none;
+  min-height: 40px;
+}
+.chat-send-btn {
+  background: #a371f7;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.flash-update { animation: flashbg 1.6s ease; }
+@keyframes flashbg { 0% { background: #2d2410; } 100% { background: #0d1117; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>聖經解構室<span>製作系統 v3</span></h1>
+  <button class="btn-settings" onclick="toggleSettings()">⚙️ 設定</button>
+</header>
+<main>
+  <div id="settings-panel">
+    <h2>系統設定</h2>
+    <div class="form-group">
+      <label>Gemini API Key</label>
+      <input type="password" id="api-key-input" placeholder="輸入你的 Gemini API Key">
+    </div>
+    <button class="btn-save" onclick="saveSettings()">儲存設定</button>
+    <div class="settings-msg" id="settings-msg">✅ 設定已儲存</div>
+
+    <div id="terms-section">
+      <h3>💬 目前生效中的自訂用語（永久套用於所有集數）</h3>
+      <div id="terms-list"></div>
+      <div class="term-empty" id="terms-empty" style="display:none;">目前沒有自訂用語，直接在聊天室說「以後都用XX，不要用OO」即可新增。</div>
+    </div>
+  </div>
+  <div id="restore-banner">
+    <p id="restore-text">偵測到上次未完成的進度</p>
+    <div style="display:flex;gap:6px;">
+      <button class="btn-restore" onclick="restoreSession()">繼續上次</button>
+      <button class="btn-clear" onclick="clearSession()">重新開始</button>
+    </div>
+  </div>
+  <div id="guide-area">
+    <div id="guide-text">平安！請輸入你想製作的聖經章節（例如：創世記15章）。</div>
+    <div class="input-row">
+      <input type="text" id="chapter-input" placeholder="例如：創世記15章">
+      <button id="start-btn" onclick="startProcess()">開始製作</button>
+    </div>
+    <div id="error-msg"></div>
+  </div>
+  <div id="results-container"></div>
+  <div id="chat-panel">
+    <h3>💬 劇情討論室</h3>
+    <div id="chat-messages"></div>
+    <div class="chat-input-row">
+      <textarea id="chat-input" placeholder="跟編劇討論這集內容，例如：STEP3的第二段感覺太拖，幫我改快一點"></textarea>
+      <button class="chat-send-btn" id="chat-send-btn" onclick="sendChatMessage()">送出</button>
+    </div>
+  </div>
+</main>
+<script>
+const MODEL = 'gemini-3-flash-preview';
+const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent';
+const STORAGE_KEY = 'bible_session_v3';
+const SERIES_MEMORY_KEY = 'bible_series_memory';
+const CUSTOM_TERMS_KEY = 'bible_custom_terms';
+let CONFIG = { apiKey: localStorage.getItem('bible_api_key') || '' };
+
+const BASE_SYSTEM_PROMPT = `你是「聖經解構室」的專業編劇。用反直覺、現代感、高節奏方式重新詮釋聖經。語調：冷面笑匠，旁白正經專業，充滿現代觀點的吐槽。
+
+【術語轉化表（必須使用）】
+上帝/耶和華 → 大後台
+上帝的命令 → 強制性條款
+立約/簽約 → 簽保密協議
+咒詛 → 法律追訴
+祝福 → 股票分紅
+違反禁令 → 違約
+審判 → 集體約談
+驅逐出園 → 強制解約離場
+祭壇/獻祭 → 簽約現場/績效考核
+生養眾多 → KPI壓力
+神的揀選 → 內定名單
+族譜記錄 → 人事檔案
+壽命/年歲 → 合約期限
+魔鬼的誘惑 → 高風險外快
+亞伯蘭與神的約 → 保護傘合約
+撒萊不生育 → 生產線停工
+上帝承諾後裔 → 空頭支票
+法老給亞伯蘭財物 → 天價彩禮
+亞伯蘭讓撒萊謊稱妹子 → 騙婚
+上帝懲罰法老 → 違約金從受害者身上扣
+應許之地 → 內定地皮
+後裔 → 接班人/產品迭代
+奴役 → 無薪實習
+出埃及 → 集體跳槽
+
+【七條創作規則】
+1.快速反轉：每個段落必須有轉折，打破觀眾預期
+2.反直覺：結論讓人覺得「跟我想的不一樣」
+3.反常識：用現代視角解讀古代行為，優先使用術語轉化表
+4.不知不覺灌輸知識：知識點必須對應笑點，缺一不可
+5.節奏感：每30秒一個讓人繼續看的理由
+6.情緒弧線：衝擊→好奇→懸念→釋放→餘韻
+7.觀眾代入感：結尾必須有互動留言問題
+
+【原文事實優先原則（最高優先級，凌駕於術語轉化表之上）】
+現代化術語轉化，是用來「輔助理解、增加荒謬感」的調味，不是用來取代或稀釋原文本身的內容。處理原文中激烈、驚悚、道德衝突強烈的情節（例如暴力、性暴力、亂倫等）時，必須：
+1. 先如實、清楚地點出原文實際描述的事件本身是什麼，不得迴避、不得用委婉包裝一筆帶過。
+2. 再用現代化術語與冷面笑匠語氣進行吐槽或解構，但吐槽的內容必須緊扣原文事實，不能架空原文另外發明一套劇情。
+3. 涉及的角色身份（例如天使、審判者等），第一次出場時要先說明其原文設定與身份，再對應到現代職稱，讓讀者清楚知道「這在原文裡到底是誰、做了什麼」。
+4. 判斷標準：讀者看完之後，應該同時知道「原文實際發生了什麼」以及「這件事在現代語境下有多荒謬」，而不是只看到一套脫離原文的職場劇本。`;
+
+// ===== 自訂用語（永久覆寫）機制 =====
+// 結構：{ "舊詞": "新詞", ... }，一旦設定即視為永久生效，套用到所有後續集數
+function getCustomTerms() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_TERMS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) || {};
+  } catch(e) { return {}; }
+}
+function saveCustomTerms(obj) { localStorage.setItem(CUSTOM_TERMS_KEY, JSON.stringify(obj)); }
+function setCustomTerm(fromTerm, toTerm) {
+  const terms = getCustomTerms();
+  terms[fromTerm] = toTerm;
+  saveCustomTerms(terms);
+}
+function deleteCustomTerm(fromTerm) {
+  const terms = getCustomTerms();
+  delete terms[fromTerm];
+  saveCustomTerms(terms);
+  renderTermsList();
+}
+function getCustomTermsBlock() {
+  const terms = getCustomTerms();
+  const keys = Object.keys(terms);
+  if (keys.length === 0) return '';
+  const lines = keys.map(k => `${k} → ${terms[k]}`).join('\n');
+  return `\n\n【自訂用語覆寫（優先於上面的術語轉化表，永久生效，必須在本次及後續所有輸出中使用新詞取代舊詞）】\n${lines}`;
+}
+function getSystemPrompt() { return BASE_SYSTEM_PROMPT + getCustomTermsBlock(); }
+
+// 初次載入時，若尚未有任何自訂用語紀錄，補上目前已知的既有變更（大後台→董事長，從創世記17章起生效）
+function seedCustomTermsIfEmpty() {
+  const terms = getCustomTerms();
+  if (Object.keys(terms).length === 0) {
+    setCustomTerm('大後台', '董事長');
+  }
+}
+
+function renderTermsList() {
+  const listEl = document.getElementById('terms-list');
+  const emptyEl = document.getElementById('terms-empty');
+  if (!listEl) return;
+  const terms = getCustomTerms();
+  const keys = Object.keys(terms);
+  listEl.innerHTML = '';
+  if (keys.length === 0) {
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  keys.forEach(k => {
+    const row = document.createElement('div');
+    row.className = 'term-row';
+    row.innerHTML = `<span class="term-text">${k} → <b>${terms[k]}</b></span><button class="term-del" onclick="deleteCustomTerm('${k}')">刪除</button>`;
+    listEl.appendChild(row);
+  });
+}
+
+let session = { chapter: '', steps: {}, adjustLog: {}, chat: [] };
+
+function saveSession() { localStorage.setItem(STORAGE_KEY, JSON.stringify(session)); }
+function loadSession() {
+  try { const r = localStorage.getItem(STORAGE_KEY); if (r) session = JSON.parse(r); }
+  catch(e) { session = { chapter: '', steps: {}, adjustLog: {}, chat: [] }; }
+  session.adjustLog = session.adjustLog || {};
+  session.chat = session.chat || [];
+}
+function clearSession() {
+  localStorage.removeItem(STORAGE_KEY);
+  session = { chapter: '', steps: {}, adjustLog: {}, chat: [] };
+  document.getElementById('results-container').innerHTML = '';
+  document.getElementById('restore-banner').style.display = 'none';
+  document.getElementById('chapter-input').value = '';
+  updateGuide('平安！請輸入你想製作的聖經章節（例如：創世記15章）。');
+  document.getElementById('start-btn').innerText = '開始製作';
+  document.getElementById('start-btn').disabled = false;
+  renderChat();
+  document.getElementById('chat-panel').style.display = 'none';
+}
+function restoreSession() {
+  document.getElementById('restore-banner').style.display = 'none';
+  document.getElementById('chapter-input').value = session.chapter;
+  document.getElementById('results-container').innerHTML = '';
+  const defs = [
+    {num:1,title:'內容分析',next:()=>step2()},
+    {num:2,title:'集數規劃',next:()=>step3()},
+    {num:3,title:'完整腳本',next:()=>step4()},
+    {num:4,title:'圖片提示詞',next:()=>step5()},
+    {num:5,title:'發布素材',next:()=>{updateGuide('本集製作完成！');}}
+  ];
+  let last = 0;
+  defs.forEach(d => { if (session.steps[d.num]) { last = d.num; createStep(d.num, d.title, session.steps[d.num], d.next, true); } });
+  if (last > 0 && last < 5) updateGuide('已恢復到 STEP ' + last + '，點「確認，繼續」進入下一步。');
+  else if (last === 5) updateGuide('本集製作已完成！');
+  document.getElementById('start-btn').innerText = '重新開始';
+  document.getElementById('start-btn').disabled = false;
+  if (last > 0) document.getElementById('chat-panel').style.display = 'block';
+  renderChat();
+}
+
+window.onload = () => {
+  if (CONFIG.apiKey) document.getElementById('api-key-input').value = CONFIG.apiKey;
+  else toggleSettings();
+  seedCustomTermsIfEmpty();
+  renderTermsList();
+  loadSession();
+  if (session.chapter && Object.keys(session.steps).length > 0) {
+    document.getElementById('restore-text').innerText = '偵測到「' + session.chapter + '」的未完成進度';
+    document.getElementById('restore-banner').style.display = 'flex';
+  }
+};
+
+function toggleSettings() {
+  const p = document.getElementById('settings-panel');
+  const isHidden = window.getComputedStyle(p).display === 'none';
+  p.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) renderTermsList();
+}
+function saveSettings() {
+  const k = document.getElementById('api-key-input').value.trim();
+  if (!k) { alert('請輸入 API Key'); return; }
+  localStorage.setItem('bible_api_key', k);
+  CONFIG.apiKey = k;
+  const msg = document.getElementById('settings-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 1500);
+}
+function updateGuide(t) { document.getElementById('guide-text').innerText = t; }
+function showError(m) { const e = document.getElementById('error-msg'); e.innerText = '❌ ' + m; e.style.display = 'block'; }
+function hideError() { document.getElementById('error-msg').style.display = 'none'; }
+
+async function callGemini(prompt, retries = 0) {
+  if (!CONFIG.apiKey) throw new Error('請先在設定中輸入 API Key');
+  const url = API_BASE + '?key=' + CONFIG.apiKey;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: getSystemPrompt() + '\n\n任務：' + prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 65535 }
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const apiMsg = data && data.error && data.error.message ? data.error.message : ('HTTP ' + res.status + ' 錯誤');
+      throw new Error(apiMsg);
+    }
+    // 防護：即使 res.ok，回應也可能因配額/安全過濾等原因沒有正常內容
+    const cand = data && data.candidates && data.candidates[0];
+    if (!cand) {
+      throw new Error('AI 沒有回傳任何內容，可能是流量限制或暫時性問題，請稍後再試');
+    }
+    if (cand.finishReason && cand.finishReason !== 'STOP' && cand.finishReason !== 'MAX_TOKENS') {
+      throw new Error('AI 回應被中斷（原因：' + cand.finishReason + '），請稍後再試或調整內容');
+    }
+    const text = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
+    if (typeof text !== 'string' || text.length === 0) {
+      throw new Error('AI 回傳的內容是空的，可能是暫時性問題，請稍後再試');
+    }
+    return text;
+  } catch(e) {
+    if (retries < 2) { await new Promise(r => setTimeout(r, 1500)); return callGemini(prompt, retries + 1); }
+    throw e;
+  }
+}
+
+function getSeriesMemory() { return localStorage.getItem(SERIES_MEMORY_KEY) || ''; }
+function saveSeriesMemoryText(t) { localStorage.setItem(SERIES_MEMORY_KEY, t); }
+
+async function extractAndUpdateSeriesMemory(chapter, step1Content) {
+  try {
+    const existing = getSeriesMemory();
+    const prompt = `以下是目前累積的「系列記憶」（跨集延續的人物資料與劇情伏筆）：\n\n【現有系列記憶】\n${existing || '（目前是空的，這是第一集）'}\n\n以下是「${chapter}」這一集剛生成的內容分析：\n\n${step1Content}\n\n請比對上面兩者，只列出「新出現的人物基本資料」以及「新埋下、值得追蹤的劇情伏筆」，不要重複已經存在於現有系列記憶裡的內容。格式精簡條列即可，例如：\n【人物】XXX：一句話描述\n【伏筆】XXX\n\n如果沒有新增內容，就回覆「無新增」。只回覆條列內容，不要加其他說明文字。`;
+    const extracted = await callGemini(prompt);
+    if (extracted && !extracted.includes('無新增')) {
+      const updated = (existing ? existing + '\n\n' : '') + `## ${chapter}\n` + extracted;
+      saveSeriesMemoryText(updated);
+    }
+  } catch(e) { /* 系列記憶更新失敗不影響主流程，靜默略過 */ }
+}
+
+function buildContext(steps, upto) {
+  const labels = {1:'STEP1 內容分析',2:'STEP2 集數規劃',3:'STEP3 完整腳本',4:'STEP4 圖片提示詞'};
+  let ctx = '';
+  for (let i = 1; i <= upto; i++) {
+    if (steps[i]) ctx += `\n\n【已確認的${labels[i]}】\n${steps[i]}`;
+  }
+  return ctx;
+}
+
+const stepPrompts = {
+  1: (ch, steps) => `${getSeriesMemory() ? '以下是本系列先前已累積的人物設定與劇情伏筆，請確保這一集內容與其保持連貫、不要互相矛盾：\n\n【系列記憶】\n' + getSeriesMemory() + '\n\n---\n\n' : ''}針對聖經「${ch}」，請完整提供：\n\n【人事檔案】\n先列出本章重要角色，說明每個角色「原文中的真實身份與意義」，再對應現代職稱，讓讀者先搞懂原文設定是什麼。\n\n【原文全文】\n逐節完整輸出，含節碼，不得省略任何節。\n\n【白話翻譯】\n逐節先如實點出該節原文實際描述的事件（不得迴避或美化，尤其是激烈、驚悚、道德衝突強烈的情節），再套用術語轉化表進行現代化吐槽解構，現代術語是輔助理解的調味，不能取代或稀釋掉原文本身的內容，也不能架空原文另外發明劇情。每節都要翻譯。\n\n【爆點分析】\n列出5-7個最具衝擊力的爆點，格式：\n爆點1：[內容描述] 強度：★★★★★ 適合位置：[開場/中段/結尾]\n\n【輸出前自我檢查，這一步不要顯示在最終回答裡】\n讀者看完白話翻譯後，是否能同時清楚知道「原文實際發生了什麼」以及「這件事在現代語境下有多荒謬」？有沒有哪一節因為過度使用職場術語包裝，導致讀者看不出原文本來的意思？如果發現不一致，請自行修正後，只輸出修正後的最終版本，不要輸出檢查過程本身。`,
+  2: (ch, steps) => `根據以下已確認的內容分析，為「${ch}」建議集數規劃：${buildContext(steps, 1)}\n\n規則：\n- 90-150秒 → 單集\n- 150-180秒 → 上下集\n- 180秒以上 → 上中下集\n\n請輸出：\n1. 預估總時長與理由\n2. 建議集數\n3. 每集主題和涵蓋的爆點\n4. 每集預估時長\n\n【輸出前自我檢查，這一步不要顯示在最終回答裡】\n在正式輸出前，請先在心裡確認：這裡列出的每一個爆點，是否都真的出現在上面的內容分析裡？有沒有漏掉內容分析裡的重要爆點？集數與秒數的判斷是否符合上面的規則？如果發現不一致，請自行修正後，只輸出修正後的最終版本，不要輸出檢查過程本身。\n\n注意：必須以上面的爆點分析為基礎，不得重新自創新的爆點或時長邏輯。`,
+  3: (ch, steps) => `根據以下已確認的內容分析與集數規劃，為「${ch}」編寫完整短影音腳本：${buildContext(steps, 2)}\n\n格式：\n【段落名稱｜內容說明｜時間區間】\n**旁白（語氣說明）：**\n「台詞」\n**停頓**\n\n要求：\n- 嚴格遵守上面已確認的集數規劃（集數、每集主題、每集時長），不得更改為其他集數或時長方案\n- 嚴格執行七條創作規則\n- 使用術語轉化表\n- 開場第一句必須是爆點\n- 每個段落必須有反轉\n- 結尾必須有留言互動問題\n- 附預估總時長\n\n【輸出前自我檢查，這一步不要顯示在最終回答裡】\n在正式輸出前，請先在心裡確認：這份腳本的集數、每集主題、時長，是否跟上面集數規劃裡寫的完全一致？有沒有出現集數規劃裡沒提到、自己另外發明的情節？角色的稱呼、術語是否前後一致，沒有中途改名或改用詞？如果發現不一致，請自行修正後，只輸出修正後的最終版本，不要輸出檢查過程本身。`,
+  4: (ch, steps) => `根據以下已確認的腳本，為「${ch}」生成圖片提示詞：${buildContext(steps, 3)}\n\n格式：\n圖1｜[段落說明]\n[英文提示詞]\n\n規格：\n- 畫風：Biblical oil painting style 或 Biblical illuminated manuscript style\n- 必須包含：Cinematic 9:16, hyper-realistic, dramatic lighting, subtle oil painting texture\n- 數量：5-6張 + 縮圖1張\n- 禁止：畫面中出現文字或數字\n- 圖片內容必須對應上面腳本中的實際段落，不得自創與腳本無關的畫面\n- 圖片時間覆蓋規則：每一集的圖片，合計必須覆蓋該集從頭到尾的完整時間，不得只集中在某一段內容而讓後段沒有對應圖片；如果該集腳本明顯分成好幾個內容區塊，圖片數量要足以讓每個區塊都至少有一張對應圖\n\n【輸出前自我檢查，這一步不要顯示在最終回答裡】\n每張圖片描述的畫面，是否都能在上面腳本裡找到對應的段落？有沒有哪張圖片是腳本裡完全沒提到的內容？這些圖片合起來，是否覆蓋了這一集從開頭到結尾的所有段落，還是有某一段完全沒有圖可以對應？如果發現不一致，請自行修正後，只輸出修正後的最終版本。`,
+  5: (ch, steps) => `根據以下已確認的腳本，針對「${ch}」這集內容，生成完整發布素材：${buildContext(steps, 3)}\n\n【YT標題】\n4個方案，格式：標題內容｜創世紀解構EP##集別\n\n【Hashtag】\n約15個，無空格格式\n固定包含：#創世記#聖經解構#冷知識#舊約聖經#短影音聖經#信仰#神學#台灣基督徒#Shorts#YTShorts\n\n【配樂推薦】\n4首Pixabay免費音樂，附風格和用法說明\n\n【第一則留言】\n直接貼上上面腳本中實際出現的互動問題，不得自創新的問題\n\n【輸出前自我檢查，這一步不要顯示在最終回答裡】\n第一則留言的內容，是否逐字對應腳本裡實際出現的那個互動問題，而不是自己改寫或另外想的？標題內容是否會爆雷還沒發生的後續集數劇情？如果發現不一致，請自行修正後，只輸出修正後的最終版本。`
+};
+
+const stepDefs = [
+  {num:1,title:'內容分析',next:()=>step2()},
+  {num:2,title:'集數規劃',next:()=>step3()},
+  {num:3,title:'完整腳本',next:()=>step4()},
+  {num:4,title:'圖片提示詞',next:()=>step5()},
+  {num:5,title:'發布素材',next:()=>{updateGuide('本集製作完成！');}}
+];
+
+function createStep(num, title, content, onConfirm, isDone = false) {
+  const card = document.createElement('div');
+  card.className = 'step-card' + (isDone ? ' collapsed' : '');
+  card.id = 'step-' + num;
+  card.innerHTML = `
+    <div class="step-header" onclick="toggleStep(${num})">
+      <div class="step-header-left">
+        <div class="step-num ${isDone ? 'done' : ''}" id="stepnum-${num}">${isDone ? '✓' : num}</div>
+        <div class="step-title">STEP ${num}｜${title}</div>
+      </div>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="step-body">
+      <div class="output-text" id="output-${num}">${content}</div>
+      <div class="step-actions">
+        <button class="btn-adj" onclick="toggleAdjust(${num})">✏️ 調整</button>
+        <button class="btn-ok" onclick="confirmStep(${num})">確認，繼續 →</button>
+      </div>
+      <div class="adjust-panel" id="adjust-${num}">
+        <textarea id="adjust-text-${num}" placeholder="說明你想調整的方向..."></textarea>
+        <button class="btn-regen" id="regen-${num}" onclick="regenStep(${num})">🔄 重新生成</button>
+      </div>
+    </div>`;
+  card._onConfirm = onConfirm;
+  document.getElementById('results-container').appendChild(card);
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  document.getElementById('chat-panel').style.display = 'block';
+  return card;
+}
+
+function toggleStep(num) { document.getElementById('step-' + num)?.classList.toggle('collapsed'); }
+function toggleAdjust(num) {
+  const p = document.getElementById('adjust-' + num);
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+function confirmStep(num) {
+  const card = document.getElementById('step-' + num);
+  if (!card) return;
+  card.classList.add('collapsed');
+  const sn = document.getElementById('stepnum-' + num);
+  sn.classList.add('done'); sn.innerText = '✓';
+  card._onConfirm && card._onConfirm();
+}
+async function regenStep(num) {
+  const adjText = document.getElementById('adjust-text-' + num)?.value?.trim();
+  if (!adjText) { alert('請輸入調整建議'); return; }
+  const btn = document.getElementById('regen-' + num);
+  btn.innerHTML = '<span class="loader"></span>重新生成中...'; btn.disabled = true;
+  try {
+    session.adjustLog = session.adjustLog || {};
+    session.adjustLog[num] = session.adjustLog[num] || [];
+    const currentContent = session.steps[num] || '';
+    const historyText = session.adjustLog[num].map((t, i) => `第${i+1}次調整：${t}`).join('\n') || '（無）';
+    const prompt = `這是這個步驟目前的內容（已包含先前所有調整）：\n\n${currentContent}\n\n【先前的調整歷史】\n${historyText}\n\n【這次新的調整要求】\n${adjText}\n\n請在目前內容的基礎上，套用這次新的調整要求，輸出調整後的「完整內容」（取代原本全部內容）。沒有被要求修改的部分必須保持不變，只調整使用者這次指出的地方，不要重新從頭發想。\n\n輸出前請先確認：這次調整有沒有不小心影響到使用者沒有要求修改的部分？先前歷次調整的成果是否都還保留著？確認無誤後，只輸出最終版本，不要輸出檢查過程。`;
+    const result = await callGemini(prompt);
+    document.getElementById('output-' + num).innerText = result;
+    session.steps[num] = result;
+    session.adjustLog[num].push(adjText);
+    saveSession();
+    document.getElementById('adjust-text-' + num).value = '';
+    toggleAdjust(num);
+  } catch(e) { alert('重新生成失敗：' + e.message); }
+  finally { btn.innerHTML = '🔄 重新生成'; btn.disabled = false; }
+}
+
+async function startProcess() {
+  const ch = document.getElementById('chapter-input').value.trim();
+  if (!ch) { alert('請輸入章節'); return; }
+  if (!CONFIG.apiKey) { showError('請先在設定中輸入 API Key'); toggleSettings(); return; }
+  hideError();
+  clearSession();
+  session.chapter = ch; saveSession();
+  document.getElementById('chapter-input').value = ch;
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('start-btn').innerHTML = '<span class="loader"></span>生成中...';
+  try { await step1(); }
+  catch(e) { showError(e.message); document.getElementById('start-btn').disabled = false; document.getElementById('start-btn').innerText = '開始製作'; }
+}
+
+async function runStep(num, title, promptFn, onConfirm) {
+  updateGuide('STEP ' + num + '｜' + title + ' 生成中...');
+  const result = await callGemini(promptFn(session.chapter, session.steps));
+  session.steps[num] = result; saveSession();
+  createStep(num, title, result, onConfirm);
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('start-btn').innerText = '重新開始';
+  if (num === 1) extractAndUpdateSeriesMemory(session.chapter, result);
+}
+
+async function step1() { await runStep(1, '內容分析', stepPrompts[1], () => step2()); }
+async function step2() {
+  updateGuide('STEP 2｜集數規劃 生成中...');
+  try { const r = await callGemini(stepPrompts[2](session.chapter, session.steps)); session.steps[2]=r; saveSession(); createStep(2,'集數規劃',r,()=>step3()); }
+  catch(e) { showError(e.message); }
+}
+async function step3() {
+  updateGuide('STEP 3｜腳本生成中...');
+  try { const r = await callGemini(stepPrompts[3](session.chapter, session.steps)); session.steps[3]=r; saveSession(); createStep(3,'完整腳本',r,()=>step4()); }
+  catch(e) { showError(e.message); }
+}
+async function step4() {
+  updateGuide('STEP 4｜圖片提示詞生成中...');
+  try { const r = await callGemini(stepPrompts[4](session.chapter, session.steps)); session.steps[4]=r; saveSession(); createStep(4,'圖片提示詞',r,()=>step5()); }
+  catch(e) { showError(e.message); }
+}
+async function step5() {
+  updateGuide('STEP 5｜發布素材生成中...');
+  try { const r = await callGemini(stepPrompts[5](session.chapter, session.steps)); session.steps[5]=r; saveSession(); createStep(5,'發布素材',r,()=>{updateGuide('本集製作完成！');}); }
+  catch(e) { showError(e.message); }
+}
+
+function renderChat() {
+  const box = document.getElementById('chat-messages');
+  box.innerHTML = '';
+  (session.chat || []).forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + (m.role === 'user' ? 'user' : (m.role === 'note' ? 'updated-note' : 'ai'));
+    div.innerText = m.text;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+const STEP_TITLES = {1:'內容分析',2:'集數規劃',3:'完整腳本',4:'圖片提示詞',5:'發布素材'};
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const btn = document.getElementById('chat-send-btn');
+  session.chat.push({ role: 'user', text }); saveSession(); renderChat();
+  input.value = '';
+  btn.disabled = true; btn.innerText = '思考中...';
+  try {
+    let stepsContext = '';
+    Object.keys(session.steps).forEach(num => {
+      stepsContext += `\n\n【STEP${num}｜${STEP_TITLES[num]}】\n${session.steps[num]}`;
+    });
+    const chatHistory = (session.chat || []).slice(0, -1).map(m => (m.role === 'user' ? '用戶：' : '編劇：') + m.text).join('\n');
+    const currentTerms = getCustomTerms();
+    const termsText = Object.keys(currentTerms).length > 0
+      ? Object.keys(currentTerms).map(k => `${k} → ${currentTerms[k]}`).join('\n')
+      : '（目前沒有自訂用語）';
+    const prompt = `你正在跟用戶討論「${session.chapter}」這一集已經生成的內容，一起討論劇情問題並視需要直接修改對應的 STEP。
+
+以下是目前各步驟已生成的完整內容：${stepsContext}
+
+以下是先前的討論紀錄：
+${chatHistory || '（無）'}
+
+以下是目前已經生效中的自訂用語（這些是永久規則，已經套用在上面所有內容裡）：
+${termsText}
+
+用戶最新的訊息：
+${text}
+
+請用以下格式回覆，務必嚴格遵守標籤格式：
+[REPLY]
+（你對用戶的回覆內容，說明你的想法、建議或修改說明）
+[/REPLY]
+
+如果用戶的訊息是要求修改某一個或多個 STEP 的內容，針對每一個需要修改的 STEP，各自輸出一個以下區塊（STEP編號用1-5的數字，內容必須是取代原本該STEP的完整版本，不是片段）：
+[UPDATE_STEP:編號]
+（修改後該STEP的完整內容）
+[/UPDATE_STEP]
+如果同時要修改多個STEP，請針對每一個STEP各自輸出一個完整的[UPDATE_STEP]區塊，不要省略任何一個。
+
+如果用戶的訊息是要求「以後都用某個新詞、不要再用某個舊詞」這種永久性、跨集數生效的用語變更要求（不是只改這一集的內容，而是要求以後每一集都套用），請額外輸出以下區塊，列出所有這次新增或修改的用語對照，每行一組，格式為「舊詞 → 新詞」：
+[UPDATE_TERMS]
+舊詞 → 新詞
+[/UPDATE_TERMS]
+
+如果只是單純討論、詢問意見，不需要修改任何STEP或用語，則不要輸出 [UPDATE_STEP] 或 [UPDATE_TERMS] 區塊。`;
+    const result = await callGemini(prompt);
+    const replyMatch = result.match(/\[REPLY\]([\s\S]*?)\[\/REPLY\]/);
+    const updateMatches = [...result.matchAll(/\[UPDATE_STEP:(\d)\]([\s\S]*?)\[\/UPDATE_STEP\]/g)];
+    const termsMatch = result.match(/\[UPDATE_TERMS\]([\s\S]*?)\[\/UPDATE_TERMS\]/);
+    const replyText = replyMatch ? replyMatch[1].trim() : result.trim();
+    session.chat.push({ role: 'ai', text: replyText });
+
+    if (updateMatches.length > 0) {
+      const updatedNums = [];
+      updateMatches.forEach(m => {
+        const stepNum = m[1];
+        const newContent = m[2].trim();
+        session.steps[stepNum] = newContent;
+        updatedNums.push(stepNum);
+        const outputEl = document.getElementById('output-' + stepNum);
+        if (outputEl) {
+          outputEl.innerText = newContent;
+          const card = document.getElementById('step-' + stepNum);
+          if (card) { card.classList.remove('collapsed'); card.classList.add('flash-update'); setTimeout(() => card.classList.remove('flash-update'), 1600); }
+        }
+      });
+      const label = updatedNums.map(n => 'STEP ' + n + '｜' + STEP_TITLES[n]).join('、');
+      session.chat.push({ role: 'note', text: '✅ 已自動更新：' + label });
+    }
+
+    if (termsMatch) {
+      const lines = termsMatch[1].split('\n').map(l => l.trim()).filter(l => l);
+      const appliedPairs = [];
+      lines.forEach(line => {
+        const parts = line.split('→').map(s => s.trim());
+        if (parts.length === 2 && parts[0] && parts[1]) {
+          setCustomTerm(parts[0], parts[1]);
+          appliedPairs.push(parts[0] + ' → ' + parts[1]);
+        }
+      });
+      if (appliedPairs.length > 0) {
+        renderTermsList();
+        session.chat.push({ role: 'note', text: '📌 已設定永久用語（從現在起套用到所有集數）：\n' + appliedPairs.join('\n') });
+      }
+    }
+
+    saveSession(); renderChat();
+  } catch(e) {
+    session.chat.push({ role: 'note', text: '❌ 討論失敗：' + e.message });
+    saveSession(); renderChat();
+  } finally { btn.disabled = false; btn.innerText = '送出'; }
+}
+</script>
+</body>
+</html>
