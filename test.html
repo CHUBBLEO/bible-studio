@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gemini 連線診斷</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, 'Noto Sans TC', sans-serif; background: #0d1117; color: #e6edf3; padding: 14px; padding-bottom: 60px; }
+h1 { font-size: 18px; color: #58a6ff; margin-bottom: 12px; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+label { display: block; font-size: 12px; color: #8b949e; margin-bottom: 6px; }
+input { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px; color: #e6edf3; font-size: 14px; }
+.hint { font-size: 13px; color: #e3b341; margin-top: 8px; line-height: 1.5; }
+button { display: block; width: 100%; background: #1f6feb; color: white; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; margin-bottom: 8px; cursor: pointer; text-align: left; }
+button:disabled { background: #21262d; color: #484f58; }
+.res { background: #161b22; border: 1px solid #30363d; border-left: 4px solid #8b949e; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.res.ok { border-left-color: #238636; }
+.res.bad { border-left-color: #f85149; }
+.res h3 { font-size: 14px; margin-bottom: 8px; }
+.verdict { background: #2d2410; border: 1px solid #b08800; color: #e3b341; border-radius: 6px; padding: 10px; font-size: 13px; line-height: 1.6; margin-bottom: 8px; white-space: pre-wrap; }
+pre { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; max-height: 380px; overflow-y: auto; color: #cdd9e5; }
+</style>
+</head>
+<body>
+<h1>Gemini 連線診斷</h1>
+
+<div class="card">
+  <label>API Key（自動從聖經解構室帶入）</label>
+  <input type="password" id="key">
+  <div class="hint" id="keyinfo"></div>
+</div>
+
+<div class="card">
+  <button id="b0" onclick="listModels()">① 檢查 Key 是否有效（不消耗額度）</button>
+  <button id="b1" onclick="testModel('gemini-3-flash-preview')">② 測試 gemini-3-flash-preview（目前系統用的）</button>
+  <button id="b2" onclick="testModel('gemini-2.5-flash')">③ 測試 gemini-2.5-flash</button>
+  <button id="b3" onclick="testModel('gemini-2.5-flash-lite')">④ 測試 gemini-2.5-flash-lite</button>
+</div>
+
+<div id="out"></div>
+
+<script>
+const keyEl = document.getElementById('key');
+try { keyEl.value = localStorage.getItem('bible_api_key') || ''; } catch(e) {}
+document.getElementById('keyinfo').innerText = keyEl.value
+  ? '已讀取到 Key，結尾是：…' + keyEl.value.slice(-4) + '\n請對照 AI Studio 裡那把 Key 的結尾（你之前截圖是 …zG7A）是不是同一把。'
+  : '沒有讀到 Key，請手動貼上。';
+
+function setBusy(b) { ['b0','b1','b2','b3'].forEach(id => document.getElementById(id).disabled = b); }
+
+function addResult(title, ok, verdict, raw) {
+  const out = document.getElementById('out');
+  const div = document.createElement('div');
+  div.className = 'res ' + (ok ? 'ok' : 'bad');
+  const h = document.createElement('h3');
+  h.textContent = (ok ? '✅ ' : '❌ ') + title + '（' + new Date().toLocaleTimeString() + '）';
+  div.appendChild(h);
+  if (verdict) {
+    const v = document.createElement('div');
+    v.className = 'verdict';
+    v.textContent = verdict;
+    div.appendChild(v);
+  }
+  const pre = document.createElement('pre');
+  pre.textContent = raw;
+  div.appendChild(pre);
+  out.insertBefore(div, out.firstChild);
+}
+
+function analyze(errObj) {
+  const lines = [];
+  let quotaIds = [];
+  const details = (errObj && errObj.details) || [];
+  details.forEach(x => {
+    const t = x['@type'] || '';
+    if (t.includes('QuotaFailure')) {
+      (x.violations || []).forEach(v => {
+        if (v.quotaId) { quotaIds.push(v.quotaId); lines.push('限制類型(quotaId)：' + v.quotaId); }
+        if (v.quotaMetric) lines.push('指標(quotaMetric)：' + v.quotaMetric);
+        if (v.quotaValue) lines.push('上限值：' + v.quotaValue);
+        if (v.quotaDimensions) lines.push('維度：' + JSON.stringify(v.quotaDimensions));
+      });
+    }
+    if (t.includes('RetryInfo') && x.retryDelay) lines.push('Google 建議等待：' + x.retryDelay);
+  });
+  const all = quotaIds.join(' ');
+  let verdict = '';
+  if (/PerDay/i.test(all)) verdict = '判斷：這是「每日」額度用完，不是等幾十秒就會好。要等每日重置，或改用其他模型／設定 Billing。';
+  else if (/Token/i.test(all) && /PerMinute/i.test(all)) verdict = '判斷：這是「每分鐘 token 量」超標，很可能是送出的內容太長（聊天室會把整集內容一起送出）。';
+  else if (/PerMinute/i.test(all)) verdict = '判斷：這是「每分鐘請求數」超標，等一分鐘後應該會恢復。';
+  else if (quotaIds.length) verdict = '判斷：無法自動歸類，請把下面整段內容截圖給我。';
+  return { verdict: (verdict ? verdict + '\n\n' : '') + lines.join('\n') };
+}
+
+async function listModels() {
+  const key = keyEl.value.trim();
+  if (!key) { alert('沒有 Key'); return; }
+  setBusy(true);
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=' + encodeURIComponent(key));
+    const txt = await res.text();
+    let json = null; try { json = JSON.parse(txt); } catch(e) {}
+    if (res.ok && json && json.models) {
+      const names = json.models
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map(m => m.name.replace('models/', ''));
+      const want = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+      const v = 'Key 有效，可以正常連線。\n' + want.map(w => (names.includes(w) ? '有 ' : '沒有 ') + w).join('\n');
+      addResult('Key 檢查（HTTP ' + res.status + '）', true, v, '可用於 generateContent 的模型共 ' + names.length + ' 個：\n' + names.join('\n'));
+    } else {
+      const a = analyze(json && json.error);
+      addResult('Key 檢查失敗（HTTP ' + res.status + '）', false, a.verdict || 'Key 可能無效或被停用。', txt);
+    }
+  } catch(e) {
+    addResult('Key 檢查：網路錯誤', false, '連不到 Google，請檢查網路。', String(e));
+  }
+  setBusy(false);
+}
+
+async function testModel(model) {
+  const key = keyEl.value.trim();
+  if (!key) { alert('沒有 Key'); return; }
+  setBusy(true);
+  const t0 = Date.now();
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: '只回覆兩個字：OK' }] }],
+        generationConfig: { maxOutputTokens: 200 }
+      })
+    });
+    const txt = await res.text();
+    const sec = ((Date.now() - t0) / 1000).toFixed(1);
+    let json = null; try { json = JSON.parse(txt); } catch(e) {}
+    if (res.ok) {
+      const reply = json && json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0] && json.candidates[0].content.parts[0].text;
+      addResult(model + ' 成功（HTTP ' + res.status + '，' + sec + '秒）', true, '這個模型現在可以正常使用。\nAI 回覆：' + (reply || '（空）'), txt);
+    } else {
+      const a = analyze(json && json.error);
+      addResult(model + ' 失敗（HTTP ' + res.status + '，' + sec + '秒）', false, a.verdict || '沒有取得額度細節，請把下面內容截圖給我。', txt);
+    }
+  } catch(e) {
+    addResult(model + '：網路錯誤', false, '連不到 Google，請檢查網路。', String(e));
+  }
+  setBusy(false);
+}
+</script>
+</body>
+</html>
